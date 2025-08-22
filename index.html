@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Multi-Class Homework Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:20px;}
+    h1 { text-align:center; }
+    .card { background:white; padding:15px; margin:10px auto; border-radius:8px; max-width:600px; box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+    input,button,textarea { padding:8px; margin:4px; }
+    .task { border-bottom:1px solid #ddd; padding:6px 0; }
+    .done { text-decoration: line-through; color: gray; }
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+
+<h1>Homework Tracker</h1>
+
+<!-- Student Section -->
+<div class="card" id="studentBox">
+  <h3>Student Section</h3>
+  <input id="studentClass" placeholder="Enter Class Code (e.g. 8A123)">
+  <button onclick="enterStudent()">Enter</button>
+</div>
+
+<!-- Teacher Section -->
+<div class="card" id="teacherBox">
+  <h3>Teacher Section</h3>
+  <input type="password" id="teacherCode" placeholder="Teacher Code">
+  <input id="teacherClass" placeholder="Class Code (e.g. 8A123)">
+  <button onclick="enterTeacher()">Enter</button>
+  
+</div>
+
+<!-- Add Homework (only for teachers) -->
+<div class="card hidden" id="addBox">
+  <h3>Add Homework for <span id="classLabel"></span></h3>
+  <input id="title" placeholder="Title"><br>
+  <input id="subject" placeholder="Subject"><br>
+  <input id="due" type="date"><br>
+  <textarea id="notes" placeholder="Notes"></textarea><br>
+  <button onclick="addTask()">Add Homework</button>
+</div>
+
+<!-- Homework List -->
+<div class="card hidden" id="listBox">
+  <h3>Homework List for <span id="classLabel2"></span></h3>
+  <div id="list"></div>
+</div>
+
+<script>
+  const TEACHER_SECRET = "1234"; // teacher code
+  let mode = null; // "student" or "teacher"
+  let currentClass = null;
+  let allTasks = JSON.parse(localStorage.getItem("multiTasks")||"{}");
+
+  function save(){ localStorage.setItem("multiTasks", JSON.stringify(allTasks)); }
+
+  // Student enters only class code
+  function enterStudent(){
+    const code = document.getElementById("studentClass").value.trim();
+    if(!code) return alert("Enter class code!");
+    mode = "student";
+    currentClass = code;
+    if(!allTasks[currentClass]) allTasks[currentClass] = [];
+    document.getElementById("listBox").classList.remove("hidden");
+    document.getElementById("classLabel2").textContent = currentClass;
+    render();
+  }
+
+  // Teacher enters teacher code + class code
+  function enterTeacher(){
+    const tcode = document.getElementById("teacherCode").value;
+    const classCode = document.getElementById("teacherClass").value.trim();
+    if(!classCode) return alert("Enter class code!");
+    if(tcode !== TEACHER_SECRET) return alert("Wrong teacher code!");
+    mode = "teacher";
+    currentClass = classCode;
+    if(!allTasks[currentClass]) allTasks[currentClass] = [];
+    document.getElementById("addBox").classList.remove("hidden");
+    document.getElementById("listBox").classList.remove("hidden");
+    document.getElementById("classLabel").textContent = currentClass;
+    document.getElementById("classLabel2").textContent = currentClass;
+    render();
+  }
+
+  function addTask(){
+    const t = {
+      title: document.getElementById("title").value,
+      subject: document.getElementById("subject").value,
+      due: document.getElementById("due").value,
+      notes: document.getElementById("notes").value,
+      done:false,
+    };
+    if(!t.title) return alert("Enter title!");
+    allTasks[currentClass].push(t);
+    save();
+    render();
+    document.getElementById("title").value="";
+    document.getElementById("subject").value="";
+    document.getElementById("due").value="";
+    document.getElementById("notes").value="";
+  }
+
+  function toggleDone(i){
+    allTasks[currentClass][i].done = !allTasks[currentClass][i].done;
+    save(); render();
+  }
+
+  function deleteTask(i){
+    if(mode!=="teacher") return alert("Only teacher can delete!");
+    allTasks[currentClass].splice(i,1);
+    save(); render();
+  }
+
+  function render(){
+    const list = document.getElementById("list");
+    list.innerHTML="";
+    allTasks[currentClass].forEach((t,i)=>{
+      const div = document.createElement("div");
+      div.className="task"+(t.done?" done":"");
+      div.innerHTML = `<b>${t.title}</b> (${t.subject||"-"}) - Due: ${t.due||"-"}<br>${t.notes||""}
+        <br>
+        <button onclick="toggleDone(${i})">${t.done?"Undo":"Done"}</button>
+        ${mode==="teacher"? `<button onclick="deleteTask(${i})">Delete</button>`:""}
+      `;
+      list.appendChild(div);
+    });
+  }
+</script>
+
+</body>
+</html>
